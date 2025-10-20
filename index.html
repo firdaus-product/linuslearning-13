@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ms-MY">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Klik & Belajar: Matematik Asas - Penambahan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { box-sizing: border-box; }
+    .card { transition: transform .2s ease; }
+    .card:hover { transform: scale(1.03); }
+    .flip { transform: rotateY(180deg); }
+    .hidden-answer { filter: blur(6px); }
+    .grid-100 { display:grid; grid-template-columns: repeat(10, minmax(28px,1fr)); gap:.25rem; }
+    .cell { display:flex; align-items:center; justify-content:center; border:1px solid #d1d5db; border-radius:.375rem; padding:.25rem .25rem; background:#fff; font-weight:600; }
+    .cell.active { background:#dbeafe; border-color:#60a5fa; }
+    .cell.jump { background:#dcfce7; border-color:#10b981; }
+    .drop-zone { border:2px dashed #cbd5e1; min-height:80px; transition:all .3s ease; }
+    .drop-zone.drag-over { border-color:#3b82f6; background:#dbeafe; }
+    #ring .active { background:#d1fae5; border-color:#10b981; }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen">
+  <!-- Header -->
+  <header class="bg-white shadow-sm p-4">
+    <div class="max-w-6xl mx-auto">
+      <h1 class="text-2xl md:text-3xl font-bold text-center text-gray-800">
+        🧮 Klik & Belajar: Matematik Asas – Penambahan
+      </h1>
+      <p class="text-center text-gray-600 mt-2">Untuk murid 5–9 tahun • Pembelajaran interaktif tanpa markah</p>
+    </div>
+  </header>
+
+  <!-- Info Bar -->
+  <section class="bg-yellow-100 border-l-4 border-yellow-500 p-4 mx-4 mt-4 rounded-r-lg shadow-sm">
+    <div class="max-w-6xl mx-auto flex items-center justify-between">
+      <div class="flex items-center">
+        <span class="text-2xl mr-3">ℹ️</span>
+        <p id="infoText" class="text-lg font-medium text-gray-800">Pilih aktiviti dan ikut langkah pembelajaran.</p>
+      </div>
+      <button id="speakBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-xl transition-colors">🔊</button>
+    </div>
+  </section>
+
+  <!-- Main -->
+  <main class="max-w-6xl mx-auto p-4">
+    <!-- Activity Card -->
+    <section class="bg-white rounded-xl shadow-lg p-6 mt-6">
+      <div id="activity" class="min-h-96">
+        <div class="text-center py-16">
+          <div class="text-6xl mb-4">🎯</div>
+          <h2 class="text-2xl font-bold text-gray-700 mb-4">Pilih aktiviti untuk mula belajar</h2>
+          <p class="text-gray-600">Klik butang aktiviti di bawah.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Activity Buttons (nama pendek) -->
+    <section class="mt-6 grid grid-cols-2 md:grid-cols-5 gap-3">
+      <button onclick="loadActivity(1)" class="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-lg font-bold text-lg">🃏 Kad Soalan</button>
+      <button onclick="loadActivity(2)" class="bg-green-500 hover:bg-green-600 text-white p-4 rounded-lg font-bold text-lg">🎶 Kotak Beracun</button>
+      <button onclick="loadActivity(3)" class="bg-purple-500 hover:bg-purple-600 text-white p-4 rounded-lg font-bold text-lg">🦋 Masalah: Rama-rama</button>
+      <button onclick="loadActivity(4)" class="bg-orange-500 hover:bg-orange-600 text-white p-4 rounded-lg font-bold text-lg">🟡 Masalah: Guli</button>
+      <button onclick="loadActivity(5)" class="bg-pink-500 hover:bg-pink-600 text-white p-4 rounded-lg font-bold text-lg">💯 Papan 100</button>
+    </section>
+
+    <!-- Controls -->
+    <section class="mt-4 flex justify-center gap-4">
+      <button onclick="clearActivity()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-bold">🗑️ Bersih</button>
+      <button onclick="nextActivity()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold">➡️ Seterusnya</button>
+    </section>
+  </main>
+
+  <script>
+    /* ====== TTS ====== */
+    let ttsUnlocked = false, currentUtterance = null, currentActivity = 0;
+    function unlockTTS(){ if(!ttsUnlocked){ speechSynthesis.speak(new SpeechSynthesisUtterance("")); ttsUnlocked=true; } }
+    function speak(text){
+      if(!ttsUnlocked) return;
+      if(currentUtterance) speechSynthesis.cancel();
+      currentUtterance = new SpeechSynthesisUtterance(text);
+      currentUtterance.lang = 'ms-MY'; currentUtterance.rate = 0.9; currentUtterance.pitch = 1.05;
+      const v = speechSynthesis.getVoices().find(v=>v.lang.includes('ms')||v.lang.includes('MY')); if(v) currentUtterance.voice=v;
+      speechSynthesis.speak(currentUtterance);
+    }
+    function setInfo(t){ document.getElementById('infoText').textContent = t; }
+    document.addEventListener('click', unlockTTS, {once:true});
+    document.getElementById('speakBtn').addEventListener('click', ()=>speak(document.getElementById('infoText').textContent));
+
+    /* ====== HELPERS ====== */
+    const rand = (arr)=>arr[Math.floor(Math.random()*arr.length)];
+
+    /* ====== Aktiviti 1: Kad Soalan (sebut jumlah dua nombor, spontan) ====== */
+    function act1(){
+      // Set kad rawak 2–9 + 2–9
+      const makeCard = ()=>{
+        const a = Math.floor(2+Math.random()*8), b = Math.floor(2+Math.random()*8), sum = a+b;
+        return {a,b,sum, id: cryptoRandomId()};
+      };
+      const cards = Array.from({length:6}, makeCard);
+
+      const html = `
+        <h3 class="text-2xl font-bold text-blue-700 text-center mb-2">🃏 Kad Soalan</h3>
+        <p class="text-center text-gray-600 mb-6">Ambil mana-mana kad. Sebut jumlahnya secara spontan, kemudian tekan “Lihat Penerangan”.</p>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+          ${cards.map(c=>`
+            <div class="card bg-blue-50 border-2 border-blue-200 rounded-xl p-4" data-id="${c.id}">
+              <div class="text-center mb-3">
+                <div class="text-4xl font-bold text-blue-800">${c.a} + ${c.b}</div>
+              </div>
+              <div class="bg-white border rounded-lg p-3 text-center">
+                <div class="text-sm text-gray-500 mb-2">Sebut jumlahnya dahulu.</div>
+                <div class="flex flex-col gap-2">
+                  <button class="px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white" onclick="revealA1('${c.id}', ${c.a}, ${c.b}, ${c.sum})">👀 Lihat Penerangan</button>
+                  <div id="a1-${c.id}" class="text-center text-lg hidden">
+                    <div class="mt-2 font-bold">Ayat Matematik</div>
+                    <div class="text-2xl text-blue-700">${c.a} + ${c.b} = <span class="underline">${c.sum}</span></div>
+                    <div class="mt-2 text-gray-700">Jumlah bermaksud gabung kedua-dua nombor.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>`;
+      document.getElementById('activity').innerHTML = html;
+      setInfo('Ambil kad, sebut jumlah secara spontan, kemudian tekan “Lihat Penerangan” untuk semakan diri.');
+    }
+    function revealA1(id,a,b,sum){
+      const box = document.getElementById(`a1-${id}`); box.classList.remove('hidden');
+      setInfo(`${a} tambah ${b} ialah ${sum}.`);
+      speak(`${a} tambah ${b} ialah ${sum}.`);
+    }
+    function cryptoRandomId(){ return Math.random().toString(36).slice(2,9); }
+
+    /* ====== Aktiviti 2: Kotak Beracun (simulasi tanpa markah) ====== */
+    /* ====== Aktiviti 2: Kotak Beracun (dengan pusingan & buang kad) ====== */
+    /* ========= Kotak Beracun + Muzik (play/pause/resume) ========= */
+    let kbTimer=null, kbRunning=false, kbAwaitingPick=false;
+    let kbDeck=[];
+
+    /* ---- Muzik helpers (Web Audio API) ---- */
+    let kbAudioCtx=null, kbMusicGain=null, kbMusicBuffer=null, kbMusicSource=null;
+    let kbMusicStartAt=0, kbMusicPausedAt=0;
+
+    function kbEnsureMusic(){
+      if (!kbAudioCtx){
+        kbAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        kbMusicGain = kbAudioCtx.createGain();
+        kbMusicGain.gain.value = 0.12;         // volume lembut
+        kbMusicGain.connect(kbAudioCtx.destination);
+        kbMusicBuffer = kbBuildLoop(kbAudioCtx); // cipta loop
+      }
+    }
+
+    // bina loop 2.4s: beep ringkas mengikut rentak
+    function kbBuildLoop(ctx){
+      const sr = ctx.sampleRate, dur = 2.4, ch = 1;
+      const buf = ctx.createBuffer(ch, Math.floor(sr*dur), sr);
+      const data = buf.getChannelData(0);
+      for (let i=0;i<data.length;i++){
+        const t = i/sr;               // masa saat
+        const beat = Math.floor(t/0.4);
+        const phase = (t % 0.4);
+        // bunyi hanya 0–0.15s setiap denyut, decay ringkas
+        const env = phase < 0.15 ? 0.85 * (1 - phase/0.15) : 0;
+        const notes = [440,523.25,659.25,523.25,440,392]; // A C E C A G
+        const f = notes[beat % notes.length];
+        data[i] = env * Math.sin(2*Math.PI*f*t);
+      }
+      return buf;
+    }
+
+    function kbStartMusic(){
+      kbEnsureMusic();
+      if (kbMusicSource) return; // sudah main
+      kbMusicSource = kbAudioCtx.createBufferSource();
+      kbMusicSource.buffer = kbMusicBuffer;
+      kbMusicSource.loop = true;
+      kbMusicSource.connect(kbMusicGain);
+      kbMusicStartAt = kbAudioCtx.currentTime;
+      // sambung dari tempat pause
+      const offset = kbMusicPausedAt % kbMusicBuffer.duration;
+      kbMusicSource.start(0, offset);
+    }
+
+    function kbPauseMusic(){
+      if (!kbAudioCtx || !kbMusicSource) return;
+      // rekod berapa saat telah dimainkan untuk sambung semula nanti
+      kbMusicPausedAt += (kbAudioCtx.currentTime - kbMusicStartAt);
+      try { kbMusicSource.stop(); } catch(e){}
+      kbMusicSource.disconnect();
+      kbMusicSource = null;
+    }
+
+    /* ---- UI utama Kotak Beracun ---- */
+    function act2(){
+      // setup dek kad rawak
+      kbDeck = [];
+      for (let i=0;i<12;i++){
+        const a = 2 + Math.floor(Math.random()*9);
+        const b = 2 + Math.floor(Math.random()*9);
+        kbDeck.push({a,b,sum:a+b,id:cryptoRandomId()});
+      }
+      // reset status muzik setiap kali aktiviti dibuka
+      kbPauseMusic();
+      kbMusicPausedAt = 0;
+
+      const pupils = Array.from({length:10},(_,i)=> i%2? "👧":"👦");
+      const html = `
+        <h3 class="text-2xl font-bold text-green-700 text-center mb-2">🎶 Kotak Beracun (Simulasi)</h3>
+        <p class="text-center text-gray-600 mb-4">Tekan “Main Muzik” untuk pusingan. Tekan “Henti” untuk berhenti pada seorang murid dan keluarkan satu kad.</p>
+
+        <div class="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
+          <div class="flex items-center justify-center gap-2 flex-wrap" id="ring">
+            ${pupils.map((p,i)=>`<div class="px-3 py-2 rounded-lg border cell" id="p-${i}">${p}</div>`).join('')}
+          </div>
+          <div class="flex items-center justify-center gap-3 mt-4">
+            <button id="kbPlay" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg" onclick="kbPlay()">▶️ Main Muzik</button>
+            <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg" onclick="kbStop()">⏹ Henti</button>
+            <span class="ml-2 text-sm text-gray-600">Kad tinggal: <b id="kbCount">${kbDeck.length}</b></span>
+          </div>
+        </div>
+
+        <div class="bg-white border rounded-xl p-4">
+          <div class="text-center text-gray-600 mb-2">Kad dari dalam kotak:</div>
+          <div class="flex flex-wrap gap-3 justify-center" id="kbDeck">
+            ${kbDeck.map(c=>`
+              <button id="btn-${c.id}" class="px-3 py-2 rounded-lg bg-white border hover:bg-green-50"
+                      onclick="kbShow('${c.id}', ${c.a}, ${c.b}, ${c.sum})">
+                ${c.a} + ${c.b}
+              </button>`).join('')}
+          </div>
+          <div id="kbHistory" class="mt-4 space-y-3"></div>
+        </div>
+      `;
+      document.getElementById('activity').innerHTML = html;
+      setInfo('Tekan “Main Muzik”, kemudian “Henti”. Murid yang terpilih keluarkan satu kad.');
+    }
+
+    function kbPlay(){
+      if (kbRunning || kbAwaitingPick) return;
+      if (kbDeck.length === 0){
+        setInfo('Semua kad telah digunakan. Aktiviti selesai.');
+        return;
+      }
+      kbRunning = true;
+      document.getElementById('kbPlay').disabled = true;
+
+      // animasi keliling murid + MULAKAN MUZIK
+      const nodes = [...document.querySelectorAll('#ring .cell')];
+      let i = 0;
+      kbTimer = setInterval(()=>{
+        nodes.forEach(n=>n.classList.remove('active'));
+        nodes[i % nodes.length].classList.add('active');
+        i++;
+      }, 220);
+
+      kbStartMusic();
+      setInfo('Muzik berjalan… tekan “Henti” untuk pilih murid.');
+    }
+
+    function kbStop(){
+      if (!kbRunning) return;
+      clearInterval(kbTimer);
+      kbRunning = false;
+      kbAwaitingPick = true;
+      document.getElementById('kbPlay').disabled = true;
+
+      // HENTI MUZIK (boleh sambung nanti)
+      kbPauseMusic();
+      setInfo('Pilih satu kad dari kotak. Selepas kad dipilih, muzik boleh dimainkan semula.');
+    }
+
+    function kbShow(id, a, b, sum){
+      if (!kbAwaitingPick){ setInfo('Tekan “Henti” dahulu, kemudian pilih kad.'); return; }
+
+      const btn = document.getElementById(`btn-${id}`);
+      if (btn) btn.remove();
+      kbDeck = kbDeck.filter(k=>k.id!==id);
+      document.getElementById('kbCount').textContent = kbDeck.length;
+
+      const hist = document.getElementById('kbHistory');
+      const block = document.createElement('div');
+      block.className = 'text-center border rounded-lg p-3';
+      block.innerHTML = `
+        <div class="font-bold">Ayat Matematik: ${a} + ${b} = <span class="underline">${sum}</span></div>
+        <div class="text-gray-700">Sebut jumlah secara spontan. Tekan 🔊 jika mahu dengar.</div>`;
+      hist.prepend(block);
+
+      setInfo(`${a} tambah ${b} ialah ${sum}. Tekan “Main Muzik” untuk pusingan seterusnya.`);
+      speak(`${a} tambah ${b} ialah ${sum}.`);
+      kbAwaitingPick = false;
+
+      // jika masih ada kad, benarkan main semula; kalau tidak, pastikan muzik terhenti
+      if (kbDeck.length > 0){
+        document.getElementById('kbPlay').disabled = false;
+      } else {
+        kbPauseMusic();
+        setInfo('Hebat! Semua kad telah digunakan. Aktiviti selesai.');
+      }
+    }
+
+    /* Util ringkas untuk ID rawak */
+    function cryptoRandomId(){
+      if (window.crypto?.getRandomValues){
+        const a = new Uint32Array(1); crypto.getRandomValues(a);
+        return 'id'+a[0].toString(36);
+      }
+      return 'id'+Math.random().toString(36).slice(2);
+    }
+
+
+
+    /* ====== Aktiviti 3: Masalah Harian – Rama-rama (tanpa pilihan jawapan) ====== */
+    function act3(){
+      const items = [
+        { left:3, right:4, emoji:'🦋', teks:'Tiga ekor rama-rama hinggap di jendela. Empat ekor lagi hinggap.' },
+        { left:2, right:5, emoji:'🦋', teks:'Dua ekor rama-rama terbang di taman. Lima ekor lagi datang.' }
+      ];
+      const html = `
+        <h3 class="text-2xl font-bold text-purple-700 text-center mb-2">🦋 Masalah Harian: Rama-rama</h3>
+        <p class="text-center text-gray-600 mb-6">Baca situasi. Tekan “Lihat Jawapan & Penerangan” untuk tunjuk ayat matematik.</p>
+        <div class="space-y-4">
+          ${items.map((it,idx)=>`
+            <div class="bg-purple-50 border border-purple-200 rounded-xl p-4">
+              <div class="text-center text-3xl mb-2">${it.emoji.repeat(it.left)} + ${it.emoji.repeat(it.right)}</div>
+              <p class="text-center text-lg mb-3">${it.teks}</p>
+              <div class="text-center">
+                <button class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white" onclick="revealStory('rr-${idx}', ${it.left}, ${it.right})">👀 Lihat Jawapan & Penerangan</button>
+                <div id="rr-${idx}" class="mt-3 hidden">
+                  <div class="text-xl font-bold">Jumlah: ${it.left} + ${it.right} = <span class="underline">${it.left+it.right}</span></div>
+                  <div class="text-gray-700 mt-1">Bina ayat: “Semua rama-rama ada ${it.left+it.right} ekor.”</div>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      document.getElementById('activity').innerHTML = html;
+      setInfo('Baca situasi harian. Tekan “Lihat Jawapan & Penerangan” untuk dengar dan lihat ayat matematik.');
+    }
+    function revealStory(id,a,b){
+      document.getElementById(id).classList.remove('hidden');
+      setInfo(`${a} tambah ${b} ialah ${a+b}. Semua rama-rama ada ${a+b} ekor.`);
+      speak(`${a} tambah ${b} ialah ${a+b}. Semua rama-rama ada ${a+b} ekor.`);
+    }
+
+    /* ====== Aktiviti 4: Masalah Harian – Guli (bentuk lazim ditunjukkan) ====== */
+    function act4(){
+      const problems = [
+        {nama:'Ahmad', ada:9, diberi:5},
+        {nama:'Sara', ada:7, diberi:6}
+      ];
+      const html = `
+        <h3 class="text-2xl font-bold text-orange-700 text-center mb-2">🟡 Masalah Harian: Guli</h3>
+        <p class="text-center text-gray-600 mb-6">Baca situasi. Tekan “Lihat Langkah” untuk tunjuk ayat matematik & bentuk lazim.</p>
+        <div class="space-y-4">
+          ${problems.map((p,i)=>`
+            <div class="bg-orange-50 border border-orange-200 rounded-xl p-4">
+              <p class="text-lg text-center mb-3">${p.nama} mempunyai ${p.ada} biji guli. Kawan memberi ${p.diberi} biji guli. Berapa jumlah guli ${p.nama} sekarang?</p>
+              <div class="text-center">
+                <button class="px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white" onclick="revealBeads('gl-${i}', ${p.ada}, ${p.diberi})">👀 Lihat Langkah</button>
+                <div id="gl-${i}" class="mt-3 hidden">
+                  <div class="font-bold text-xl">Ayat Matematik: ${p.ada} + ${p.diberi} = <span class="underline">${p.ada+p.diberi}</span></div>
+                  <div class="mt-2">
+                    <div class="text-gray-700 font-semibold">Bentuk Lazim</div>
+                    <pre class="bg-white border rounded-lg p-3 text-left text-gray-800 inline-block">
+  ${String(p.ada).padStart(2,' ')}
++ ${String(p.diberi).padStart(2,' ')}
+  ${'-'.repeat(3)}
+  ${String(p.ada+p.diberi).padStart(2,' ')}
+                    </pre>
+                  </div>
+                  <div class="text-gray-700 mt-1">Terangkan: gabung bilangan guli, kira jumlah.</div>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      document.getElementById('activity').innerHTML = html;
+      setInfo('Gunakan situasi guli untuk faham tambah. Tekan “Lihat Langkah” untuk penerangan.');
+    }
+    function revealBeads(id,a,b){
+      document.getElementById(id).classList.remove('hidden');
+      setInfo(`${a} tambah ${b} ialah ${a+b}.`);
+      speak(`${a} tambah ${b} ialah ${a+b}.`);
+    }
+
+    /* ====== Aktiviti 5: Papan 100 (eksplorasi tambah) ====== */
+    function act5(){
+      const html = `
+        <h3 class="text-2xl font-bold text-pink-700 text-center mb-2">💯 Papan 100</h3>
+        <p class="text-center text-gray-600 mb-4">Klik nombor mula, kemudian pilih “+1”, “+2”, “+5”, atau “+10” untuk lihat pergerakan dan jumlah.</p>
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="md:col-span-2 bg-white border rounded-xl p-4">
+            <div id="board" class="grid-100"></div>
+          </div>
+          <div class="bg-pink-50 border border-pink-200 rounded-xl p-4">
+            <div class="text-lg font-bold mb-2">Kawalan</div>
+            <div class="flex flex-wrap gap-2 mb-3">
+              <button class="px-3 py-2 rounded-lg bg-pink-600 hover:bg-pink-700 text-white" onclick="pickStart()">Pilih Nombor Mula</button>
+              <button class="px-3 py-2 rounded-lg bg-gray-200" onclick="resetBoard()">Set Semula</button>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button class="px-3 py-2 rounded-lg bg-white border" onclick="jump(1)">+1</button>
+              <button class="px-3 py-2 rounded-lg bg-white border" onclick="jump(2)">+2</button>
+              <button class="px-3 py-2 rounded-lg bg-white border" onclick="jump(5)">+5</button>
+              <button class="px-3 py-2 rounded-lg bg-white border" onclick="jump(10)">+10</button>
+            </div>
+            <div class="mt-4">
+              <div class="text-sm text-gray-600">Ayat Matematik:</div>
+              <div id="eq" class="text-xl font-bold">—</div>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('activity').innerHTML = html;
+      renderBoard();
+      setInfo('Pilih nombor mula di papan 100. Gunakan butang +1/+2/+5/+10 untuk menjelajah tambah.');
+    }
+    let startNum=null, currentNum=null, totalAdded=0;
+    function renderBoard(){
+      const wrap = document.getElementById('board'); wrap.innerHTML='';
+      for(let i=1;i<=100;i++){
+        const b = document.createElement('button');
+        b.className='cell'; b.textContent=i;
+        b.onclick = ()=>{
+          if(startNum===null){ startNum=i; currentNum=i; totalAdded=0; updateEq(); markActive(); setInfo(`Mula pada ${i}. Pilih butang + untuk tambah.`); speak(`Mula pada ${i}`);}
+        };
+        wrap.appendChild(b);
+      }
+      markActive();
+    }
+    function pickStart(){ setInfo('Klik mana-mana nombor di papan untuk jadikan nombor mula.'); }
+    function resetBoard(){ startNum=null; currentNum=null; totalAdded=0; updateEq(); renderBoard(); setInfo('Papan di set semula. Pilih nombor mula.'); }
+    function markActive(){
+      document.querySelectorAll('#board .cell').forEach(c=>c.classList.remove('active','jump'));
+      if(currentNum!==null){
+        const all = [...document.querySelectorAll('#board .cell')];
+        all[currentNum-1]?.classList.add('active');
+      }
+    }
+    function jump(k){
+      if(currentNum===null){ setInfo('Pilih nombor mula dahulu.'); return; }
+      const next = currentNum + k; if(next>100) { setInfo('Had 100. Cuba langkah lain.'); return; }
+      const cells = [...document.querySelectorAll('#board .cell')];
+      cells[next-1]?.classList.add('jump');
+      currentNum = next; totalAdded += k; updateEq();
+      setInfo(`Tambah ${k}. Sekarang di ${currentNum}.`);
+      speak(`Tambah ${k}. Sekarang di ${currentNum}.`);
+      markActive();
+    }
+    function updateEq(){
+      const eq = document.getElementById('eq');
+      if(startNum===null){ eq.textContent='—'; return; }
+      eq.textContent = `${startNum} + ${totalAdded} = ${startNum + totalAdded}`;
+    }
+
+    /* ====== Router & Controls ====== */
+    function loadActivity(n){
+      currentActivity = n;
+      if(n===1) act1();
+      if(n===2) act2();
+      if(n===3) act3();
+      if(n===4) act4();
+      if(n===5) act5();
+    }
+    function clearActivity(){
+      currentActivity = 0;
+      document.getElementById('activity').innerHTML = `
+        <div class="text-center py-16">
+          <div class="text-6xl mb-4">🎯</div>
+          <h2 class="text-2xl font-bold text-gray-700 mb-4">Pilih aktiviti untuk mula belajar</h2>
+          <p class="text-gray-600">Klik butang aktiviti di atas.</p>
+        </div>`;
+      setInfo('Aktiviti dibersihkan. Pilih aktiviti untuk sambung belajar.');
+    }
+    function nextActivity(){ loadActivity( currentActivity<5 ? currentActivity+1 : 1 ); }
+  </script>
+</body>
+</html>
