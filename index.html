@@ -3,480 +3,537 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Klik & Belajar: Matematik Asas - Penambahan</title>
+  <title>Matematik Ceria: Penambahan (Aktiviti)</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
   <style>
-    body { box-sizing: border-box; }
-    .card { transition: transform .2s ease; }
-    .card:hover { transform: scale(1.03); }
-    .flip { transform: rotateY(180deg); }
-    .hidden-answer { filter: blur(6px); }
-    .grid-100 { display:grid; grid-template-columns: repeat(10, minmax(28px,1fr)); gap:.25rem; }
-    .cell { display:flex; align-items:center; justify-content:center; border:1px solid #d1d5db; border-radius:.375rem; padding:.25rem .25rem; background:#fff; font-weight:600; }
-    .cell.active { background:#dbeafe; border-color:#60a5fa; }
-    .cell.jump { background:#dcfce7; border-color:#10b981; }
-    .drop-zone { border:2px dashed #cbd5e1; min-height:80px; transition:all .3s ease; }
-    .drop-zone.drag-over { border-color:#3b82f6; background:#dbeafe; }
-    #ring .active { background:#d1fae5; border-color:#10b981; }
+    /* --- UI STYLE (MASTER REFERENCE - TEMA HIJAU) --- */
+    body { 
+        font-family: 'Fredoka', sans-serif; 
+        background-color: #f0fdf4; 
+        background-image: radial-gradient(#86efac 2px, transparent 2px); 
+        background-size: 30px 30px; 
+    }
+    
+    .game-card { 
+        background: white; 
+        border: 4px solid #475569; 
+        box-shadow: 8px 8px 0px #00000020; 
+        border-radius: 1.5rem; 
+        min-height: 600px; 
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        overflow: hidden; 
+    }
+    
+    /* Buttons */
+    .btn-3d { 
+        transition: all 0.1s; 
+        border-bottom-width: 6px; 
+        border-color: rgba(0,0,0,0.2); 
+        transform: translateY(0); 
+        cursor: pointer; 
+        display: inline-block; 
+    }
+    .btn-3d:active:not(:disabled) { transform: translateY(4px); border-bottom-width: 2px; box-shadow: none; }
+    .btn-3d:disabled { opacity: 0.6; cursor: not-allowed; border-bottom-width: 6px; filter: grayscale(100%); }
+
+    /* Specific Activity Styles */
+    
+    /* Papan 100 Grid */
+    .grid-100 { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+    .cell-100 { 
+        aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+        border: 1px solid #e2e8f0; border-radius: 6px; font-weight: bold; font-size: 0.8rem;
+        cursor: pointer; transition: all 0.1s;
+    }
+    .cell-100:hover { background: #f1f5f9; }
+    .cell-100.active { background: #3b82f6; color: white; border-color: #1d4ed8; transform: scale(1.1); box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5); z-index: 10; }
+    .cell-100.jump { background: #22c55e; color: white; animation: popIn 0.3s; }
+    
+    .grid-scroll-container {
+        width: 100%; max-height: 400px; overflow-y: auto; padding: 10px;
+        background: #f8fafc; border-radius: 1rem; border: 2px solid #e2e8f0;
+    }
+
+    /* Kotak Beracun Ring */
+    .pupil-cell {
+        width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;
+        border: 3px solid #cbd5e1; border-radius: 50%; background: white; font-size: 1.5rem;
+        transition: all 0.2s;
+    }
+    .pupil-cell.active { border-color: #ef4444; background: #fee2e2; transform: scale(1.2); box-shadow: 0 0 15px #ef4444; }
+
+    @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
   </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen">
-  <!-- Header -->
-  <header class="bg-white shadow-sm p-4">
-    <div class="max-w-6xl mx-auto">
-      <h1 class="text-2xl md:text-3xl font-bold text-center text-gray-800">
-        🧮 Klik & Belajar: Matematik Asas – Penambahan
-      </h1>
-      <p class="text-center text-gray-600 mt-2">Untuk murid 5–9 tahun • Pembelajaran interaktif tanpa markah</p>
-    </div>
-  </header>
+<body class="min-h-screen text-slate-800 pb-10">
 
-  <!-- Info Bar -->
-  <section class="bg-yellow-100 border-l-4 border-yellow-500 p-4 mx-4 mt-4 rounded-r-lg shadow-sm">
-    <div class="max-w-6xl mx-auto flex items-center justify-between">
-      <div class="flex items-center">
-        <span class="text-2xl mr-3">ℹ️</span>
-        <p id="infoText" class="text-lg font-medium text-gray-800">Pilih aktiviti dan ikut langkah pembelajaran.</p>
+  <div class="fixed top-4 left-0 right-0 z-50 px-4 pointer-events-none">
+    <div class="max-w-4xl mx-auto bg-green-400 border-4 border-green-600 rounded-full px-6 py-3 shadow-xl flex items-center justify-between pointer-events-auto transform hover:scale-[1.01] transition-transform">
+      <div class="flex items-center gap-3">
+        <span class="text-3xl animate-bounce">🧮</span>
+        <span id="info-text" class="text-xl font-bold text-green-900 leading-none mt-1">Matematik Asas: Tambah</span>
       </div>
-      <button id="speakBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-xl transition-colors">🔊</button>
+      <button id="speak-btn" onclick="speakInfo()" class="bg-white hover:bg-green-50 text-green-600 border-2 border-green-200 rounded-full p-2 transition-colors shadow-sm">🔊</button>
     </div>
-  </section>
+  </div>
+  <div class="h-24"></div>
 
-  <!-- Main -->
-  <main class="max-w-6xl mx-auto p-4">
-    <!-- Activity Card -->
-    <section class="bg-white rounded-xl shadow-lg p-6 mt-6">
-      <div id="activity" class="min-h-96">
-        <div class="text-center py-16">
-          <div class="text-6xl mb-4">🎯</div>
-          <h2 class="text-2xl font-bold text-gray-700 mb-4">Pilih aktiviti untuk mula belajar</h2>
-          <p class="text-gray-600">Klik butang aktiviti di bawah.</p>
+  <div class="max-w-6xl mx-auto p-4">
+    
+    <div class="game-card p-8 mb-8">
+        <div id="activity-content" class="w-full relative z-10 flex flex-col items-center justify-center h-full transition-opacity duration-200">
+            <div class="py-10 text-center">
+                <div class="text-8xl mb-6 animate-pulse">➕</div>
+                <h2 class="text-5xl font-bold text-emerald-600 mb-4">Aktiviti Penambahan</h2>
+                <p class="text-2xl text-slate-500 mb-8 font-semibold">Kotak Beracun, Masalah Harian & Papan 100.</p>
+                <div class="text-4xl animate-bounce">👇</div>
+            </div>
         </div>
+    </div>
+
+    <div class="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg p-6 border-2 border-white">
+      <h3 class="text-2xl font-bold text-slate-700 mb-4 text-center">🎮 Pilih Aktiviti</h3>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+        <button onclick="loadActivity(1)" class="btn-3d bg-blue-500 text-white font-bold py-4 px-2 rounded-xl text-lg">🃏 Kad Soalan</button>
+        <button onclick="loadActivity(2)" class="btn-3d bg-green-500 text-white font-bold py-4 px-2 rounded-xl text-lg">🎶 Kotak Beracun</button>
+        <button onclick="loadActivity(3)" class="btn-3d bg-purple-500 text-white font-bold py-4 px-2 rounded-xl text-lg">🦋 Rama-rama</button>
+        <button onclick="loadActivity(4)" class="btn-3d bg-orange-500 text-white font-bold py-4 px-2 rounded-xl text-lg">🟡 Masalah Guli</button>
+        <button onclick="loadActivity(5)" class="btn-3d bg-pink-500 text-white font-bold py-4 px-2 rounded-xl text-lg">💯 Papan 100</button>
       </div>
-    </section>
 
-    <!-- Activity Buttons (nama pendek) -->
-    <section class="mt-6 grid grid-cols-2 md:grid-cols-5 gap-3">
-      <button onclick="loadActivity(1)" class="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-lg font-bold text-lg">🃏 Kad Soalan</button>
-      <button onclick="loadActivity(2)" class="bg-green-500 hover:bg-green-600 text-white p-4 rounded-lg font-bold text-lg">🎶 Kotak Beracun</button>
-      <button onclick="loadActivity(3)" class="bg-purple-500 hover:bg-purple-600 text-white p-4 rounded-lg font-bold text-lg">🦋 Masalah: Rama-rama</button>
-      <button onclick="loadActivity(4)" class="bg-orange-500 hover:bg-orange-600 text-white p-4 rounded-lg font-bold text-lg">🟡 Masalah: Guli</button>
-      <button onclick="loadActivity(5)" class="bg-pink-500 hover:bg-pink-600 text-white p-4 rounded-lg font-bold text-lg">💯 Papan 100</button>
-    </section>
-
-    <!-- Controls -->
-    <section class="mt-4 flex justify-center gap-4">
-      <button onclick="clearActivity()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-bold">🗑️ Bersih</button>
-      <button onclick="nextActivity()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold">➡️ Seterusnya</button>
-    </section>
-  </main>
+      <div class="flex justify-center gap-4 border-t-2 border-slate-100 pt-6">
+        <button onclick="clearActivity()" class="btn-3d bg-slate-400 text-white font-bold py-2 px-6 rounded-full text-lg">🏠 Menu</button>
+        <button onclick="nextActivity()" class="btn-3d bg-indigo-500 text-white font-bold py-2 px-8 rounded-full text-xl">Seterusnya ➡️</button>
+      </div>
+    </div>
+  </div>
 
   <script>
-    /* ====== TTS ====== */
-    let ttsUnlocked = false, currentUtterance = null, currentActivity = 0;
-    function unlockTTS(){ if(!ttsUnlocked){ speechSynthesis.speak(new SpeechSynthesisUtterance("")); ttsUnlocked=true; } }
-    function speak(text){
-      if(!ttsUnlocked) return;
-      if(currentUtterance) speechSynthesis.cancel();
-      currentUtterance = new SpeechSynthesisUtterance(text);
-      currentUtterance.lang = 'ms-MY'; currentUtterance.rate = 0.9; currentUtterance.pitch = 1.05;
-      const v = speechSynthesis.getVoices().find(v=>v.lang.includes('ms')||v.lang.includes('MY')); if(v) currentUtterance.voice=v;
-      speechSynthesis.speak(currentUtterance);
+    /* --- STANDARD HELPERS --- */
+    let currentActivity = 0;
+    let ttsEnabled = false;
+    let currentInfo = "Pilih aktiviti untuk bermula!";
+    
+    function speak(text) { 
+        if (!ttsEnabled || !('speechSynthesis' in window)) return; 
+        window.speechSynthesis.cancel(); 
+        const u = new SpeechSynthesisUtterance(text); u.lang = 'ms-MY'; u.rate = 0.95; u.pitch = 1.05; 
+        const ms = window.speechSynthesis.getVoices().find(v => v.lang === 'ms-MY' || v.lang?.startsWith('ms')); 
+        if (ms) u.voice = ms; 
+        window.speechSynthesis.speak(u); 
     }
-    function setInfo(t){ document.getElementById('infoText').textContent = t; }
-    document.addEventListener('click', unlockTTS, {once:true});
-    document.getElementById('speakBtn').addEventListener('click', ()=>speak(document.getElementById('infoText').textContent));
-
-    /* ====== HELPERS ====== */
-    const rand = (arr)=>arr[Math.floor(Math.random()*arr.length)];
-
-    /* ====== Aktiviti 1: Kad Soalan (sebut jumlah dua nombor, spontan) ====== */
-    function act1(){
-      // Set kad rawak 2–9 + 2–9
-      const makeCard = ()=>{
-        const a = Math.floor(2+Math.random()*8), b = Math.floor(2+Math.random()*8), sum = a+b;
-        return {a,b,sum, id: cryptoRandomId()};
-      };
-      const cards = Array.from({length:6}, makeCard);
-
-      const html = `
-        <h3 class="text-2xl font-bold text-blue-700 text-center mb-2">🃏 Kad Soalan</h3>
-        <p class="text-center text-gray-600 mb-6">Ambil mana-mana kad. Sebut jumlahnya secara spontan, kemudian tekan “Lihat Penerangan”.</p>
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-          ${cards.map(c=>`
-            <div class="card bg-blue-50 border-2 border-blue-200 rounded-xl p-4" data-id="${c.id}">
-              <div class="text-center mb-3">
-                <div class="text-4xl font-bold text-blue-800">${c.a} + ${c.b}</div>
-              </div>
-              <div class="bg-white border rounded-lg p-3 text-center">
-                <div class="text-sm text-gray-500 mb-2">Sebut jumlahnya dahulu.</div>
-                <div class="flex flex-col gap-2">
-                  <button class="px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white" onclick="revealA1('${c.id}', ${c.a}, ${c.b}, ${c.sum})">👀 Lihat Penerangan</button>
-                  <div id="a1-${c.id}" class="text-center text-lg hidden">
-                    <div class="mt-2 font-bold">Ayat Matematik</div>
-                    <div class="text-2xl text-blue-700">${c.a} + ${c.b} = <span class="underline">${c.sum}</span></div>
-                    <div class="mt-2 text-gray-700">Jumlah bermaksud gabung kedua-dua nombor.</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>`;
-      document.getElementById('activity').innerHTML = html;
-      setInfo('Ambil kad, sebut jumlah secara spontan, kemudian tekan “Lihat Penerangan” untuk semakan diri.');
+    
+    function setInfo(text) { 
+        currentInfo = text; const infoEl = document.getElementById('info-text'); 
+        infoEl.style.opacity = 0; setTimeout(() => { infoEl.textContent = text; infoEl.style.opacity = 1; }, 200); 
     }
-    function revealA1(id,a,b,sum){
-      const box = document.getElementById(`a1-${id}`); box.classList.remove('hidden');
-      setInfo(`${a} tambah ${b} ialah ${sum}.`);
-      speak(`${a} tambah ${b} ialah ${sum}.`);
+    
+    function speakInfo() { 
+        if (!ttsEnabled) { ttsEnabled = true; document.getElementById('speak-btn').classList.add('bg-green-100', 'text-green-600'); } 
+        speak(currentInfo); 
     }
+    
     function cryptoRandomId(){ return Math.random().toString(36).slice(2,9); }
 
-    /* ====== Aktiviti 2: Kotak Beracun (simulasi tanpa markah) ====== */
-    /* ====== Aktiviti 2: Kotak Beracun (dengan pusingan & buang kad) ====== */
-    /* ========= Kotak Beracun + Muzik (play/pause/resume) ========= */
-    let kbTimer=null, kbRunning=false, kbAwaitingPick=false;
-    let kbDeck=[];
-
-    /* ---- Muzik helpers (Web Audio API) ---- */
+    /* --- AUDIO LOGIC FOR KOTAK BERACUN (GLOBAL) --- */
     let kbAudioCtx=null, kbMusicGain=null, kbMusicBuffer=null, kbMusicSource=null;
     let kbMusicStartAt=0, kbMusicPausedAt=0;
 
     function kbEnsureMusic(){
-      if (!kbAudioCtx){
-        kbAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        kbMusicGain = kbAudioCtx.createGain();
-        kbMusicGain.gain.value = 0.12;         // volume lembut
-        kbMusicGain.connect(kbAudioCtx.destination);
-        kbMusicBuffer = kbBuildLoop(kbAudioCtx); // cipta loop
-      }
+        if (!kbAudioCtx){
+            kbAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            kbMusicGain = kbAudioCtx.createGain();
+            kbMusicGain.gain.value = 0.1; // Volume rendah
+            kbMusicGain.connect(kbAudioCtx.destination);
+            kbMusicBuffer = kbBuildLoop(kbAudioCtx);
+        }
     }
 
-    // bina loop 2.4s: beep ringkas mengikut rentak
     function kbBuildLoop(ctx){
-      const sr = ctx.sampleRate, dur = 2.4, ch = 1;
-      const buf = ctx.createBuffer(ch, Math.floor(sr*dur), sr);
-      const data = buf.getChannelData(0);
-      for (let i=0;i<data.length;i++){
-        const t = i/sr;               // masa saat
-        const beat = Math.floor(t/0.4);
-        const phase = (t % 0.4);
-        // bunyi hanya 0–0.15s setiap denyut, decay ringkas
-        const env = phase < 0.15 ? 0.85 * (1 - phase/0.15) : 0;
-        const notes = [440,523.25,659.25,523.25,440,392]; // A C E C A G
-        const f = notes[beat % notes.length];
-        data[i] = env * Math.sin(2*Math.PI*f*t);
-      }
-      return buf;
+        const sr = ctx.sampleRate, dur = 2.4, ch = 1;
+        const buf = ctx.createBuffer(ch, Math.floor(sr*dur), sr);
+        const data = buf.getChannelData(0);
+        for (let i=0;i<data.length;i++){
+            const t = i/sr; 
+            const beat = Math.floor(t/0.4);
+            const phase = (t % 0.4);
+            const env = phase < 0.15 ? 0.85 * (1 - phase/0.15) : 0;
+            const notes = [440,523.25,659.25,523.25,440,392]; 
+            const f = notes[beat % notes.length];
+            data[i] = env * Math.sin(2*Math.PI*f*t);
+        }
+        return buf;
     }
 
     function kbStartMusic(){
-      kbEnsureMusic();
-      if (kbMusicSource) return; // sudah main
-      kbMusicSource = kbAudioCtx.createBufferSource();
-      kbMusicSource.buffer = kbMusicBuffer;
-      kbMusicSource.loop = true;
-      kbMusicSource.connect(kbMusicGain);
-      kbMusicStartAt = kbAudioCtx.currentTime;
-      // sambung dari tempat pause
-      const offset = kbMusicPausedAt % kbMusicBuffer.duration;
-      kbMusicSource.start(0, offset);
+        kbEnsureMusic();
+        if (kbMusicSource) return;
+        if (kbAudioCtx.state === 'suspended') kbAudioCtx.resume();
+        kbMusicSource = kbAudioCtx.createBufferSource();
+        kbMusicSource.buffer = kbMusicBuffer;
+        kbMusicSource.loop = true;
+        kbMusicSource.connect(kbMusicGain);
+        kbMusicStartAt = kbAudioCtx.currentTime;
+        const offset = kbMusicPausedAt % kbMusicBuffer.duration;
+        kbMusicSource.start(0, offset);
     }
 
     function kbPauseMusic(){
-      if (!kbAudioCtx || !kbMusicSource) return;
-      // rekod berapa saat telah dimainkan untuk sambung semula nanti
-      kbMusicPausedAt += (kbAudioCtx.currentTime - kbMusicStartAt);
-      try { kbMusicSource.stop(); } catch(e){}
-      kbMusicSource.disconnect();
-      kbMusicSource = null;
+        if (!kbAudioCtx || !kbMusicSource) return;
+        kbMusicPausedAt += (kbAudioCtx.currentTime - kbMusicStartAt);
+        try { kbMusicSource.stop(); } catch(e){}
+        kbMusicSource.disconnect();
+        kbMusicSource = null;
     }
 
-    /* ---- UI utama Kotak Beracun ---- */
-    function act2(){
-      // setup dek kad rawak
-      kbDeck = [];
-      for (let i=0;i<12;i++){
-        const a = 2 + Math.floor(Math.random()*9);
-        const b = 2 + Math.floor(Math.random()*9);
-        kbDeck.push({a,b,sum:a+b,id:cryptoRandomId()});
-      }
-      // reset status muzik setiap kali aktiviti dibuka
-      kbPauseMusic();
-      kbMusicPausedAt = 0;
-
-      const pupils = Array.from({length:10},(_,i)=> i%2? "👧":"👦");
-      const html = `
-        <h3 class="text-2xl font-bold text-green-700 text-center mb-2">🎶 Kotak Beracun (Simulasi)</h3>
-        <p class="text-center text-gray-600 mb-4">Tekan “Main Muzik” untuk pusingan. Tekan “Henti” untuk berhenti pada seorang murid dan keluarkan satu kad.</p>
-
-        <div class="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
-          <div class="flex items-center justify-center gap-2 flex-wrap" id="ring">
-            ${pupils.map((p,i)=>`<div class="px-3 py-2 rounded-lg border cell" id="p-${i}">${p}</div>`).join('')}
-          </div>
-          <div class="flex items-center justify-center gap-3 mt-4">
-            <button id="kbPlay" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg" onclick="kbPlay()">▶️ Main Muzik</button>
-            <button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg" onclick="kbStop()">⏹ Henti</button>
-            <span class="ml-2 text-sm text-gray-600">Kad tinggal: <b id="kbCount">${kbDeck.length}</b></span>
-          </div>
-        </div>
-
-        <div class="bg-white border rounded-xl p-4">
-          <div class="text-center text-gray-600 mb-2">Kad dari dalam kotak:</div>
-          <div class="flex flex-wrap gap-3 justify-center" id="kbDeck">
-            ${kbDeck.map(c=>`
-              <button id="btn-${c.id}" class="px-3 py-2 rounded-lg bg-white border hover:bg-green-50"
-                      onclick="kbShow('${c.id}', ${c.a}, ${c.b}, ${c.sum})">
-                ${c.a} + ${c.b}
-              </button>`).join('')}
-          </div>
-          <div id="kbHistory" class="mt-4 space-y-3"></div>
-        </div>
-      `;
-      document.getElementById('activity').innerHTML = html;
-      setInfo('Tekan “Main Muzik”, kemudian “Henti”. Murid yang terpilih keluarkan satu kad.');
-    }
-
-    function kbPlay(){
-      if (kbRunning || kbAwaitingPick) return;
-      if (kbDeck.length === 0){
-        setInfo('Semua kad telah digunakan. Aktiviti selesai.');
-        return;
-      }
-      kbRunning = true;
-      document.getElementById('kbPlay').disabled = true;
-
-      // animasi keliling murid + MULAKAN MUZIK
-      const nodes = [...document.querySelectorAll('#ring .cell')];
-      let i = 0;
-      kbTimer = setInterval(()=>{
-        nodes.forEach(n=>n.classList.remove('active'));
-        nodes[i % nodes.length].classList.add('active');
-        i++;
-      }, 220);
-
-      kbStartMusic();
-      setInfo('Muzik berjalan… tekan “Henti” untuk pilih murid.');
-    }
-
-    function kbStop(){
-      if (!kbRunning) return;
-      clearInterval(kbTimer);
-      kbRunning = false;
-      kbAwaitingPick = true;
-      document.getElementById('kbPlay').disabled = true;
-
-      // HENTI MUZIK (boleh sambung nanti)
-      kbPauseMusic();
-      setInfo('Pilih satu kad dari kotak. Selepas kad dipilih, muzik boleh dimainkan semula.');
-    }
-
-    function kbShow(id, a, b, sum){
-      if (!kbAwaitingPick){ setInfo('Tekan “Henti” dahulu, kemudian pilih kad.'); return; }
-
-      const btn = document.getElementById(`btn-${id}`);
-      if (btn) btn.remove();
-      kbDeck = kbDeck.filter(k=>k.id!==id);
-      document.getElementById('kbCount').textContent = kbDeck.length;
-
-      const hist = document.getElementById('kbHistory');
-      const block = document.createElement('div');
-      block.className = 'text-center border rounded-lg p-3';
-      block.innerHTML = `
-        <div class="font-bold">Ayat Matematik: ${a} + ${b} = <span class="underline">${sum}</span></div>
-        <div class="text-gray-700">Sebut jumlah secara spontan. Tekan 🔊 jika mahu dengar.</div>`;
-      hist.prepend(block);
-
-      setInfo(`${a} tambah ${b} ialah ${sum}. Tekan “Main Muzik” untuk pusingan seterusnya.`);
-      speak(`${a} tambah ${b} ialah ${sum}.`);
-      kbAwaitingPick = false;
-
-      // jika masih ada kad, benarkan main semula; kalau tidak, pastikan muzik terhenti
-      if (kbDeck.length > 0){
-        document.getElementById('kbPlay').disabled = false;
-      } else {
-        kbPauseMusic();
-        setInfo('Hebat! Semua kad telah digunakan. Aktiviti selesai.');
-      }
-    }
-
-    /* Util ringkas untuk ID rawak */
-    function cryptoRandomId(){
-      if (window.crypto?.getRandomValues){
-        const a = new Uint32Array(1); crypto.getRandomValues(a);
-        return 'id'+a[0].toString(36);
-      }
-      return 'id'+Math.random().toString(36).slice(2);
-    }
-
-
-
-    /* ====== Aktiviti 3: Masalah Harian – Rama-rama (tanpa pilihan jawapan) ====== */
-    function act3(){
-      const items = [
-        { left:3, right:4, emoji:'🦋', teks:'Tiga ekor rama-rama hinggap di jendela. Empat ekor lagi hinggap.' },
-        { left:2, right:5, emoji:'🦋', teks:'Dua ekor rama-rama terbang di taman. Lima ekor lagi datang.' }
-      ];
-      const html = `
-        <h3 class="text-2xl font-bold text-purple-700 text-center mb-2">🦋 Masalah Harian: Rama-rama</h3>
-        <p class="text-center text-gray-600 mb-6">Baca situasi. Tekan “Lihat Jawapan & Penerangan” untuk tunjuk ayat matematik.</p>
-        <div class="space-y-4">
-          ${items.map((it,idx)=>`
-            <div class="bg-purple-50 border border-purple-200 rounded-xl p-4">
-              <div class="text-center text-3xl mb-2">${it.emoji.repeat(it.left)} + ${it.emoji.repeat(it.right)}</div>
-              <p class="text-center text-lg mb-3">${it.teks}</p>
-              <div class="text-center">
-                <button class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white" onclick="revealStory('rr-${idx}', ${it.left}, ${it.right})">👀 Lihat Jawapan & Penerangan</button>
-                <div id="rr-${idx}" class="mt-3 hidden">
-                  <div class="text-xl font-bold">Jumlah: ${it.left} + ${it.right} = <span class="underline">${it.left+it.right}</span></div>
-                  <div class="text-gray-700 mt-1">Bina ayat: “Semua rama-rama ada ${it.left+it.right} ekor.”</div>
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `;
-      document.getElementById('activity').innerHTML = html;
-      setInfo('Baca situasi harian. Tekan “Lihat Jawapan & Penerangan” untuk dengar dan lihat ayat matematik.');
-    }
-    function revealStory(id,a,b){
-      document.getElementById(id).classList.remove('hidden');
-      setInfo(`${a} tambah ${b} ialah ${a+b}. Semua rama-rama ada ${a+b} ekor.`);
-      speak(`${a} tambah ${b} ialah ${a+b}. Semua rama-rama ada ${a+b} ekor.`);
-    }
-
-    /* ====== Aktiviti 4: Masalah Harian – Guli (bentuk lazim ditunjukkan) ====== */
-    function act4(){
-      const problems = [
-        {nama:'Ahmad', ada:9, diberi:5},
-        {nama:'Sara', ada:7, diberi:6}
-      ];
-      const html = `
-        <h3 class="text-2xl font-bold text-orange-700 text-center mb-2">🟡 Masalah Harian: Guli</h3>
-        <p class="text-center text-gray-600 mb-6">Baca situasi. Tekan “Lihat Langkah” untuk tunjuk ayat matematik & bentuk lazim.</p>
-        <div class="space-y-4">
-          ${problems.map((p,i)=>`
-            <div class="bg-orange-50 border border-orange-200 rounded-xl p-4">
-              <p class="text-lg text-center mb-3">${p.nama} mempunyai ${p.ada} biji guli. Kawan memberi ${p.diberi} biji guli. Berapa jumlah guli ${p.nama} sekarang?</p>
-              <div class="text-center">
-                <button class="px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white" onclick="revealBeads('gl-${i}', ${p.ada}, ${p.diberi})">👀 Lihat Langkah</button>
-                <div id="gl-${i}" class="mt-3 hidden">
-                  <div class="font-bold text-xl">Ayat Matematik: ${p.ada} + ${p.diberi} = <span class="underline">${p.ada+p.diberi}</span></div>
-                  <div class="mt-2">
-                    <div class="text-gray-700 font-semibold">Bentuk Lazim</div>
-                    <pre class="bg-white border rounded-lg p-3 text-left text-gray-800 inline-block">
-  ${String(p.ada).padStart(2,' ')}
-+ ${String(p.diberi).padStart(2,' ')}
-  ${'-'.repeat(3)}
-  ${String(p.ada+p.diberi).padStart(2,' ')}
-                    </pre>
-                  </div>
-                  <div class="text-gray-700 mt-1">Terangkan: gabung bilangan guli, kira jumlah.</div>
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `;
-      document.getElementById('activity').innerHTML = html;
-      setInfo('Gunakan situasi guli untuk faham tambah. Tekan “Lihat Langkah” untuk penerangan.');
-    }
-    function revealBeads(id,a,b){
-      document.getElementById(id).classList.remove('hidden');
-      setInfo(`${a} tambah ${b} ialah ${a+b}.`);
-      speak(`${a} tambah ${b} ialah ${a+b}.`);
-    }
-
-    /* ====== Aktiviti 5: Papan 100 (eksplorasi tambah) ====== */
-    function act5(){
-      const html = `
-        <h3 class="text-2xl font-bold text-pink-700 text-center mb-2">💯 Papan 100</h3>
-        <p class="text-center text-gray-600 mb-4">Klik nombor mula, kemudian pilih “+1”, “+2”, “+5”, atau “+10” untuk lihat pergerakan dan jumlah.</p>
-        <div class="grid md:grid-cols-3 gap-4">
-          <div class="md:col-span-2 bg-white border rounded-xl p-4">
-            <div id="board" class="grid-100"></div>
-          </div>
-          <div class="bg-pink-50 border border-pink-200 rounded-xl p-4">
-            <div class="text-lg font-bold mb-2">Kawalan</div>
-            <div class="flex flex-wrap gap-2 mb-3">
-              <button class="px-3 py-2 rounded-lg bg-pink-600 hover:bg-pink-700 text-white" onclick="pickStart()">Pilih Nombor Mula</button>
-              <button class="px-3 py-2 rounded-lg bg-gray-200" onclick="resetBoard()">Set Semula</button>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <button class="px-3 py-2 rounded-lg bg-white border" onclick="jump(1)">+1</button>
-              <button class="px-3 py-2 rounded-lg bg-white border" onclick="jump(2)">+2</button>
-              <button class="px-3 py-2 rounded-lg bg-white border" onclick="jump(5)">+5</button>
-              <button class="px-3 py-2 rounded-lg bg-white border" onclick="jump(10)">+10</button>
-            </div>
-            <div class="mt-4">
-              <div class="text-sm text-gray-600">Ayat Matematik:</div>
-              <div id="eq" class="text-xl font-bold">—</div>
-            </div>
-          </div>
-        </div>
-      `;
-      document.getElementById('activity').innerHTML = html;
-      renderBoard();
-      setInfo('Pilih nombor mula di papan 100. Gunakan butang +1/+2/+5/+10 untuk menjelajah tambah.');
-    }
-    let startNum=null, currentNum=null, totalAdded=0;
-    function renderBoard(){
-      const wrap = document.getElementById('board'); wrap.innerHTML='';
-      for(let i=1;i<=100;i++){
-        const b = document.createElement('button');
-        b.className='cell'; b.textContent=i;
-        b.onclick = ()=>{
-          if(startNum===null){ startNum=i; currentNum=i; totalAdded=0; updateEq(); markActive(); setInfo(`Mula pada ${i}. Pilih butang + untuk tambah.`); speak(`Mula pada ${i}`);}
-        };
-        wrap.appendChild(b);
-      }
-      markActive();
-    }
-    function pickStart(){ setInfo('Klik mana-mana nombor di papan untuk jadikan nombor mula.'); }
-    function resetBoard(){ startNum=null; currentNum=null; totalAdded=0; updateEq(); renderBoard(); setInfo('Papan di set semula. Pilih nombor mula.'); }
-    function markActive(){
-      document.querySelectorAll('#board .cell').forEach(c=>c.classList.remove('active','jump'));
-      if(currentNum!==null){
-        const all = [...document.querySelectorAll('#board .cell')];
-        all[currentNum-1]?.classList.add('active');
-      }
-    }
-    function jump(k){
-      if(currentNum===null){ setInfo('Pilih nombor mula dahulu.'); return; }
-      const next = currentNum + k; if(next>100) { setInfo('Had 100. Cuba langkah lain.'); return; }
-      const cells = [...document.querySelectorAll('#board .cell')];
-      cells[next-1]?.classList.add('jump');
-      currentNum = next; totalAdded += k; updateEq();
-      setInfo(`Tambah ${k}. Sekarang di ${currentNum}.`);
-      speak(`Tambah ${k}. Sekarang di ${currentNum}.`);
-      markActive();
-    }
-    function updateEq(){
-      const eq = document.getElementById('eq');
-      if(startNum===null){ eq.textContent='—'; return; }
-      eq.textContent = `${startNum} + ${totalAdded} = ${startNum + totalAdded}`;
-    }
-
-    /* ====== Router & Controls ====== */
-    function loadActivity(n){
+    /* --- ROUTER --- */
+    function loadActivity(n) {
+      kbPauseMusic(); // Stop music if switching activities
       currentActivity = n;
-      if(n===1) act1();
-      if(n===2) act2();
-      if(n===3) act3();
-      if(n===4) act4();
-      if(n===5) act5();
+      const content = document.getElementById('activity-content');
+      content.style.opacity = 0;
+      setTimeout(() => {
+          if (n === 1) setupAct1(content);
+          else if (n === 2) setupAct2(content);
+          else if (n === 3) setupAct3(content);
+          else if (n === 4) setupAct4(content);
+          else if (n === 5) setupAct5(content);
+          content.style.opacity = 1; 
+      }, 200);
     }
-    function clearActivity(){
-      currentActivity = 0;
-      document.getElementById('activity').innerHTML = `
-        <div class="text-center py-16">
-          <div class="text-6xl mb-4">🎯</div>
-          <h2 class="text-2xl font-bold text-gray-700 mb-4">Pilih aktiviti untuk mula belajar</h2>
-          <p class="text-gray-600">Klik butang aktiviti di atas.</p>
-        </div>`;
-      setInfo('Aktiviti dibersihkan. Pilih aktiviti untuk sambung belajar.');
+
+    function clearActivity() {
+        kbPauseMusic();
+        currentActivity = 0;
+        document.getElementById('activity-content').innerHTML = `<div class="py-10 text-center"><div class="text-8xl mb-6 animate-pulse">➕</div><h2 class="text-5xl font-bold text-emerald-600 mb-4">Aktiviti Penambahan</h2><p class="text-2xl text-slate-500 mb-8 font-semibold">Pilih butang di bawah.</p></div>`;
+        setInfo("Pilih aktiviti di bawah.");
     }
-    function nextActivity(){ loadActivity( currentActivity<5 ? currentActivity+1 : 1 ); }
+    function nextActivity() { let next = currentActivity + 1; if (next > 5) next = 1; loadActivity(next); }
+
+
+    /* =========================================
+       LOGIK AKTIVITI
+       ========================================= */
+
+    /* --- 1. Kad Soalan --- */
+    function setupAct1(content) {
+        setInfo("Ambil kad, sebut jumlah, kemudian semak.");
+        const makeCard = ()=>{
+            const a = Math.floor(2+Math.random()*8), b = Math.floor(2+Math.random()*8), sum = a+b;
+            return {a,b,sum, id: cryptoRandomId()};
+        };
+        const cards = Array.from({length:3}, makeCard);
+
+        content.innerHTML = `
+            <div class="w-full max-w-4xl text-center">
+                <h3 class="text-3xl font-bold text-blue-600 mb-6">🃏 Kad Soalan Spontan</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    ${cards.map(c => `
+                        <div class="bg-blue-50 border-4 border-blue-200 rounded-2xl p-6 flex flex-col items-center relative">
+                            <div class="text-5xl font-black text-blue-800 mb-4">${c.a} + ${c.b}</div>
+                            
+                            <button onclick="revealA1(this, ${c.a}, ${c.b}, ${c.sum})" class="btn-3d bg-blue-500 text-white px-4 py-2 rounded-xl font-bold text-lg w-full">
+                                👀 Lihat Jawapan
+                            </button>
+                            
+                            <div class="answer-box hidden mt-4 bg-white p-4 rounded-xl border-2 border-blue-100 w-full animate-popIn">
+                                <div class="text-sm text-slate-500">Jawapan:</div>
+                                <div class="text-4xl font-bold text-blue-600">${c.sum}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    window.revealA1 = function(btn, a, b, sum) {
+        const box = btn.nextElementSibling;
+        box.classList.remove('hidden');
+        btn.style.display = 'none';
+        const msg = `${a} tambah ${b} ialah ${sum}.`;
+        setInfo(msg); speak(msg);
+    }
+
+    /* --- 2. Kotak Beracun --- */
+    let kbTimer=null, kbRunning=false, kbAwaitingPick=false;
+    let kbDeck=[];
+
+    function setupAct2(content) {
+        setInfo("Tekan Main Muzik. Tekan Henti untuk pilih murid.");
+        kbDeck = [];
+        for (let i=0;i<12;i++){
+            const a = 2 + Math.floor(Math.random()*9);
+            const b = 2 + Math.floor(Math.random()*9);
+            kbDeck.push({a,b,sum:a+b,id:cryptoRandomId()});
+        }
+        kbMusicPausedAt = 0;
+        kbRunning = false; kbAwaitingPick = false;
+
+        const pupils = Array.from({length:10},(_,i)=> i%2? "👧":"👦");
+
+        content.innerHTML = `
+            <div class="w-full max-w-3xl text-center">
+                <h3 class="text-3xl font-bold text-green-600 mb-4">🎶 Kotak Beracun</h3>
+                
+                <div class="bg-green-50 border-4 border-green-200 rounded-3xl p-6 mb-6 relative">
+                     <div class="flex items-center justify-center gap-3 flex-wrap mb-6" id="ring">
+                        ${pupils.map((p,i)=>`<div class="pupil-cell" id="p-${i}">${p}</div>`).join('')}
+                    </div>
+                    
+                    <div class="flex justify-center gap-4">
+                        <button id="kbPlay" class="btn-3d bg-green-500 text-white px-6 py-3 rounded-xl font-bold text-lg" onclick="kbPlay()">▶️ Main Muzik</button>
+                        <button class="btn-3d bg-red-500 text-white px-6 py-3 rounded-xl font-bold text-lg" onclick="kbStop()">⏹ Henti</button>
+                    </div>
+                    <div class="mt-2 text-slate-500 font-bold">Kad Baki: <span id="kbCount">${kbDeck.length}</span></div>
+                </div>
+
+                <div id="deck-area" class="bg-white border-2 border-slate-200 rounded-2xl p-6 min-h-[150px]">
+                    <div class="text-slate-400 font-bold mb-4">Kad di dalam kotak:</div>
+                    <div class="flex flex-wrap gap-2 justify-center" id="kbCardList">
+                         ${kbDeck.map(c=>`
+                          <button id="btn-${c.id}" class="btn-3d bg-slate-100 text-slate-600 px-3 py-2 rounded-lg font-bold"
+                                  onclick="kbShow('${c.id}', ${c.a}, ${c.b}, ${c.sum})">
+                            ???
+                          </button>`).join('')}
+                    </div>
+                    <div id="kbResult" class="mt-4 text-2xl font-bold text-green-600"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    window.kbPlay = function() {
+        if (kbRunning || kbAwaitingPick || kbDeck.length === 0) return;
+        kbRunning = true;
+        document.getElementById('kbPlay').disabled = true;
+        document.getElementById('kbPlay').classList.add('opacity-50');
+        
+        // Animation
+        const nodes = [...document.querySelectorAll('.pupil-cell')];
+        let i = 0;
+        kbTimer = setInterval(()=>{
+            nodes.forEach(n=>n.classList.remove('active'));
+            nodes[i % nodes.length].classList.add('active');
+            i++;
+        }, 220);
+
+        kbStartMusic();
+        setInfo('Muzik berjalan… tekan “Henti” apabila bersedia.');
+    }
+
+    window.kbStop = function() {
+        if (!kbRunning) return;
+        clearInterval(kbTimer);
+        kbRunning = false;
+        kbAwaitingPick = true;
+        
+        kbPauseMusic();
+        setInfo('Muzik berhenti! Pilih satu kad dari kotak di bawah.');
+        speak("Pilih satu kad.");
+    }
+
+    window.kbShow = function(id, a, b, sum) {
+        if (!kbAwaitingPick) { setInfo('Tekan “Henti” dahulu sebelum pilih kad.'); return; }
+        
+        const btn = document.getElementById(`btn-${id}`);
+        if(btn) btn.remove();
+        
+        kbDeck = kbDeck.filter(k=>k.id!==id);
+        document.getElementById('kbCount').innerText = kbDeck.length;
+        
+        const res = document.getElementById('kbResult');
+        res.innerHTML = `<div class="animate-popIn p-4 bg-green-100 border-2 border-green-400 rounded-xl inline-block shadow-lg text-3xl">${a} + ${b} = ${sum}</div>`;
+        
+        const msg = `${a} tambah ${b} ialah ${sum}.`;
+        setInfo(msg); speak(msg);
+        
+        kbAwaitingPick = false;
+        document.getElementById('kbPlay').disabled = false;
+        document.getElementById('kbPlay').classList.remove('opacity-50');
+        
+        if(kbDeck.length === 0) setInfo("Tamat! Semua kad telah dipilih.");
+    }
+
+
+    /* --- 3. Masalah Rama-rama --- */
+    function setupAct3(content) {
+        setInfo("Baca cerita rama-rama.");
+        const items = [
+            { left:3, right:4, emoji:'🦋', teks:'3 rama-rama hinggap. 4 lagi datang.' },
+            { left:2, right:5, emoji:'🐞', teks:'2 kumbang di daun. 5 lagi sampai.' }
+        ];
+        
+        content.innerHTML = `
+             <div class="w-full max-w-4xl text-center">
+                <h3 class="text-3xl font-bold text-purple-600 mb-6">🦋 Masalah Harian: Haiwan</h3>
+                <div class="space-y-6">
+                    ${items.map((it,idx)=>`
+                        <div class="bg-purple-50 border-2 border-purple-200 rounded-2xl p-6">
+                            <div class="text-4xl mb-4 tracking-widest">${it.emoji.repeat(it.left)} &nbsp; + &nbsp; ${it.emoji.repeat(it.right)}</div>
+                            <p class="text-xl font-bold text-purple-900 mb-4">"${it.teks}"</p>
+                            
+                            <button onclick="revealStory(this, ${it.left}, ${it.right})" class="btn-3d bg-purple-500 text-white px-6 py-2 rounded-xl font-bold text-lg">
+                                Kira Jumlah
+                            </button>
+                            
+                            <div class="hidden mt-4 bg-white p-4 rounded-xl border-2 border-purple-100 animate-popIn">
+                                <div class="text-3xl font-bold text-purple-600">${it.left} + ${it.right} = ${it.left+it.right}</div>
+                                <div class="text-slate-500">Semuanya ada ${it.left+it.right} ekor.</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    window.revealStory = function(btn, a, b) {
+        btn.nextElementSibling.classList.remove('hidden');
+        btn.style.display = 'none';
+        speak(`Jumlahnya ${a+b} ekor.`);
+    }
+
+
+    /* --- 4. Masalah Guli --- */
+    function setupAct4(content) {
+        setInfo("Lihat bentuk lazim.");
+        const problems = [{nama:'Ali', a:9, b:5}, {nama:'Siti', a:7, b:6}];
+        
+        content.innerHTML = `
+             <div class="w-full max-w-4xl text-center">
+                <h3 class="text-3xl font-bold text-orange-600 mb-6">🟡 Masalah Guli (Bentuk Lazim)</h3>
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    ${problems.map((p,i) => `
+                        <div class="bg-orange-50 border-2 border-orange-200 rounded-2xl p-6">
+                            <p class="text-lg font-bold text-orange-900 mb-4 text-left">
+                                ${p.nama} ada <span class="text-red-600">${p.a}</span> guli. <br>
+                                Kawan beri <span class="text-blue-600">${p.b}</span> lagi.
+                            </p>
+                            
+                            <div class="bg-white border-2 border-slate-200 rounded-xl p-6 w-fit mx-auto shadow-inner text-3xl font-mono text-right leading-loose">
+                                <div class="text-red-500">${p.a < 10 ? '&nbsp;'+p.a : p.a}</div>
+                                <div class="border-b-4 border-slate-800 text-blue-500 relative">
+                                    <span class="absolute left-[-20px] text-slate-400 text-xl top-3">+</span>
+                                    ${p.b < 10 ? '&nbsp;'+p.b : p.b}
+                                </div>
+                                <div class="font-black text-orange-600 pt-2 hidden result-${i}">
+                                    ${p.a+p.b}
+                                </div>
+                            </div>
+                            
+                            <button onclick="revealGuli(${i}, ${p.a}, ${p.b})" class="btn-3d bg-orange-500 text-white px-6 py-2 rounded-xl font-bold mt-6 w-full">
+                                Kira
+                            </button>
+                        </div>
+                    `).join('')}
+                 </div>
+            </div>
+        `;
+    }
+    window.revealGuli = function(idx, a, b) {
+        document.querySelector(`.result-${idx}`).classList.remove('hidden');
+        speak(`${a} tambah ${b} ialah ${a+b}.`);
+    }
+
+
+    /* --- 5. Papan 100 --- */
+    let startNum=null, currentNum=null, totalAdded=0;
+
+    function setupAct5(content) {
+        setInfo("Pilih nombor mula di papan.");
+        startNum=null; currentNum=null; totalAdded=0;
+        
+        let gridHTML = '';
+        for(let i=1; i<=100; i++){
+            gridHTML += `<div class="cell-100" id="c-${i}" onclick="click100(${i})">${i}</div>`;
+        }
+
+        content.innerHTML = `
+             <div class="w-full max-w-5xl text-center">
+                <h3 class="text-3xl font-bold text-pink-600 mb-4">💯 Papan 100</h3>
+                
+                <div class="grid md:grid-cols-3 gap-6 items-start">
+                    <div class="md:col-span-2">
+                        <div class="grid-scroll-container shadow-inner">
+                            <div class="grid-100">${gridHTML}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-pink-50 border-4 border-pink-200 rounded-2xl p-6 flex flex-col gap-4 sticky top-0">
+                        <div class="text-xl font-bold text-pink-800 mb-2">Kawalan Lompat 
+
+[Image of 100 number board]
+</div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="jump(1)" class="btn-3d bg-white border-pink-200 text-pink-600 font-bold py-2 px-4 rounded-lg">+1</button>
+                            <button onclick="jump(2)" class="btn-3d bg-white border-pink-200 text-pink-600 font-bold py-2 px-4 rounded-lg">+2</button>
+                            <button onclick="jump(5)" class="btn-3d bg-white border-pink-200 text-pink-600 font-bold py-2 px-4 rounded-lg">+5</button>
+                            <button onclick="jump(10)" class="btn-3d bg-white border-pink-200 text-pink-600 font-bold py-2 px-4 rounded-lg">+10</button>
+                        </div>
+                        
+                        <div class="mt-4 p-4 bg-white rounded-xl border-2 border-pink-100">
+                            <div class="text-sm text-slate-400 font-bold">Ayat Matematik:</div>
+                            <div id="eq-display" class="text-2xl font-bold text-slate-700 min-h-[40px] flex items-center justify-center">---</div>
+                        </div>
+
+                        <button onclick="setupAct5(document.getElementById('activity-content'))" class="btn-3d bg-slate-400 text-white font-bold py-2 rounded-lg mt-2">Set Semula</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    window.click100 = function(n) {
+        if(startNum === null) {
+            startNum = n; currentNum = n; totalAdded = 0;
+            document.querySelectorAll('.cell-100').forEach(c => c.classList.remove('active', 'jump'));
+            document.getElementById(`c-${n}`).classList.add('active');
+            updateEq();
+            setInfo(`Mula pada ${n}. Pilih butang + untuk melompat.`);
+            speak(`Mula nombor ${n}`);
+        }
+    }
+
+    window.jump = function(k) {
+        if(currentNum === null) { setInfo('Sila pilih nombor mula di papan dahulu.'); return; }
+        
+        const next = currentNum + k;
+        if(next > 100) { setInfo('Nombor melebihi 100. Cuba nombor lain.'); return; }
+        
+        // Visual updates
+        const cell = document.getElementById(`c-${next}`);
+        cell.classList.add('jump');
+        
+        // Update logic
+        currentNum = next;
+        totalAdded += k;
+        
+        // Scroll to view if needed
+        cell.scrollIntoView({behavior: "smooth", block: "center"});
+        
+        // Keep start active, highlight current path logic could be complex, simple highlight new pos
+        setTimeout(() => {
+             document.querySelectorAll('.cell-100.active').forEach(c => c.classList.remove('active'));
+             cell.classList.add('active');
+        }, 100);
+
+        updateEq();
+        speak(`Tambah ${k}, jadi ${next}`);
+    }
+
+    function updateEq(){
+        const eq = document.getElementById('eq-display');
+        if(startNum === null) { eq.innerText = '---'; return; }
+        eq.innerText = `${startNum} + ${totalAdded} = ${currentNum}`;
+    }
+
   </script>
 </body>
 </html>
